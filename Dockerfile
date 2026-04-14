@@ -15,4 +15,4 @@ COPY auto_insurance ./auto_insurance
 
 EXPOSE 8000
 
-CMD ["sh", "-c", ".venv/bin/uvicorn auto_insurance.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", ".venv/bin/streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port ${PORT:-8000}"]
