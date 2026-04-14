@@ -1,0 +1,42 @@
+name: CI pipeline
+
+on:
+  push:
+    branches: [ "wissal","dev", "main" ]
+  pull_request:
+    branches: [ "dev", "main" ]
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen --dev
+
+      - name: Run Ruff
+        run: uv run ruff check auto_insurance tests
+
+      - name: Run Pylint
+        run: uv run pylint auto_insurance/src/ --disable=C0114,C0116
+
+      - name: Run Mypy
+        run: uv run mypy auto_insurance/src/
+
+      - name: Run Tests
+        run: uv run --with httpx pytest tests -v
+
+      - name: Build Docker image
+        run: docker build -t auto-insurance-api .

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AutoAssur — Simulateur de Tarification</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:    #1e3a5f;
+      --navy-h:  #152c48;
+      --navy-l:  #e8eef6;
+      --bg:      #f1f5f9;
+      --bg2:     #ffffff;
+      --bg3:     #f8fafc;
+      --border:  #e2e8f0;
+      --green:   #15803d;
+      --amber:   #b45309;
+      --red:     #b91c1c;
+      --text:    #1e293b;
+      --muted:   #64748b;
+      --muted2:  #475569;
+      --ff: 'Inter', system-ui, sans-serif;
+      --fm: 'JetBrains Mono', monospace;
+    }
+    body { font-family: var(--ff); background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13px; }
+
+    /* ─ NAV ─ */
+    .navbar {
+      background: var(--navy); height: 54px;
+      display: flex; align-items: center; padding: 0 24px; gap: 16px;
+      position: sticky; top: 0; z-index: 200;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo-icon { width: 30px; height: 30px; background: rgba(255,255,255,0.15); border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+    .nav-logo-icon svg { width: 15px; height: 15px; }
+    .nav-logo-name { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.01em; }
+    .nav-sep { width: 1px; height: 20px; background: rgba(255,255,255,0.15); }
+    .nav-sub { font-size: 12px; color: rgba(255,255,255,0.5); }
+    .nav-spacer { flex: 1; }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tab {
+      font-size: 12px; color: rgba(255,255,255,0.6); padding: 6px 14px;
+      border-radius: 6px; cursor: pointer; transition: all .15s; border: none;
+      background: transparent; font-family: var(--ff);
+    }
+    .nav-tab:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .nav-tab.active { color: #fff; background: rgba(255,255,255,0.15); font-weight: 500; }
+    .nav-badge {
+      font-family: var(--fm); font-size: 11px; padding: 3px 9px; border-radius: 4px;
+      background: rgba(255,255,255,0.08); color: #86efac;
+      border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; gap: 5px;
+    }
+    .nav-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #86efac; animation: blink 2s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    /* ─ PAGES ─ */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ══════════════════════════════════════
+       PAGE CLIENT
+    ══════════════════════════════════════ */
+    .client-hero {
+      background: linear-gradient(135deg, var(--navy) 0%, #2d5a9e 100%);
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    .client-hero h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+    .client-hero p { font-size: 14px; color: rgba(255,255,255,0.65); max-width: 420px; margin: 0 auto; }
+
+    .client-wrap { max-width: 680px; margin: 0 auto; padding: 28px 20px; }
+
+    .step-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .step-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .step-num {
+      width: 28px; height: 28px; border-radius: 50%; background: var(--navy);
+      color: #fff; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .step-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .step-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .client-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .client-group { display: flex; flex-direction: column; gap: 5px; }
+    .client-group.full { grid-column: 1 / -1; }
+    .client-label { font-size: 12px; color: var(--muted2); font-weight: 500; }
+    .client-input, .client-select {
+      background: var(--bg3); border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; font-size: 13px; color: var(--text);
+      font-family: var(--ff); width: 100%; transition: border-color .15s, box-shadow .15s;
+      -webkit-appearance: none;
+    }
+    .client-input:focus, .client-select:focus {
+      outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(30,58,95,0.1);
+    }
+
+    .client-btn {
+      width: 100%; padding: 14px; background: var(--navy); color: #fff;
+      border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+      font-family: var(--ff); cursor: pointer; transition: background .15s, transform .1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .client-btn:hover { background: var(--navy-h); }
+    .client-btn:active { transform: scale(0.99); }
+    .client-btn:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+
+    /* Résultat client */
+    .result-client {
+      background: var(--bg2); border: 2px solid var(--navy); border-radius: 14px;
+      padding: 28px 24px; margin-bottom: 16px; display: none;
+      box-shadow: 0 4px 16px rgba(30,58,95,0.1);
+    }
+    .result-client.show { display: block; }
+    .result-client-top { text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .result-check {
+      width: 48px; height: 48px; background: #dcfce7; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;
+    }
+    .result-check svg { width: 24px; height: 24px; }
+    .result-client-msg { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+    .result-client-prime { font-size: 42px; font-weight: 700; color: var(--navy); line-height: 1; }
+    .result-client-unit { font-size: 16px; color: var(--muted); font-weight: 400; }
+    .result-client-annual { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+    .result-client-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .result-detail-box {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+    }
+    .result-detail-lbl { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .result-detail-val { font-size: 15px; font-weight: 600; color: var(--text); }
+
+    .risk-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px;
+    }
+    .risk-pill svg { width: 14px; height: 14px; }
+    .rp-faible     { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .rp-modere     { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .rp-eleve      { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .rp-tres-eleve { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .coverage-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .coverage-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); }
+    .coverage-item svg { width: 16px; height: 16px; color: var(--green); flex-shrink: 0; }
+
+    .subscribe-btn {
+      width: 100%; padding: 14px; background: var(--green); color: #fff;
+      border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+      font-family: var(--ff); cursor: pointer; transition: background .15s;
+    }
+    .subscribe-btn:hover { background: #166534; }
+
+    .error-client {
+      background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px;
+      padding: 12px 16px; font-size: 13px; color: #b91c1c; margin-bottom: 12px; display: none;
+    }
+
+    .spinner-c {
+      width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════════════════════════════
+       LOGIN ANALYSTE
+    ══════════════════════════════════════ */
+    .login-wrap {
+      max-width: 380px; margin: 60px auto; padding: 0 20px;
+    }
+    .login-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+      padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .login-logo { text-align: center; margin-bottom: 24px; }
+    .login-logo-icon {
+      width: 52px; height: 52px; background: var(--navy); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;
+    }
+    .login-logo-icon svg { width: 24px; height: 24px; }
+    .login-title { font-size: 16px; font-weight: 700; color: var(--text); }
+    .login-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .login-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+    .login-label { font-size: 12px; font-weight: 500; color: var(--muted2); }
+    .login-input {
+      background: var(--bg3); border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; font-size: 13px; color: var(--text); font-family: var(--ff); width: 100%;
+      transition: border-color .15s;
+    }
+    .login-input:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(30,58,95,0.1); }
+    .login-btn {
+      width: 100%; padding: 11px; background: var(--navy); color: #fff;
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+      font-family: var(--ff); cursor: pointer; margin-top: 4px; transition: background .15s;
+    }
+    .login-btn:hover { background: var(--navy-h); }
+    .login-error {
+      background: #fee2e2; border: 1px solid #fecaca; border-radius: 6px;
+      padding: 8px 12px; font-size: 12px; color: #b91c1c; margin-bottom: 12px; display: none;
+    }
+    .login-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 14px; }
+    .login-hint code { font-family: var(--fm); background: var(--bg3); padding: 1px 5px; border-radius: 3px; }
+
+    /* ══════════════════════════════════════
+       PAGE ANALYSTE
+    ══════════════════════════════════════ */
+    .analyst-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px; display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .card + .card { margin-top: 16px; }
+    .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 16px; }
+    .section-sep { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--navy); opacity: 0.5; padding-bottom: 8px; border-bottom: 2px solid var(--navy); margin: 16px 0 12px; }
+    .section-sep:first-child { margin-top: 0; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-label { font-size: 11px; color: var(--muted2); font-weight: 500; }
+    .form-input, .form-select {
+      background: var(--bg3); border: 1px solid var(--border); border-radius: 7px;
+      padding: 8px 10px; font-size: 12px; color: var(--text); font-family: var(--ff); width: 100%;
+      transition: border-color .15s; -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--navy); box-shadow: 0 0 0 3px rgba(30,58,95,0.1); }
+    .analyst-btn {
+      width: 100%; padding: 10px; background: var(--navy); color: #fff; border: none;
+      border-radius: 8px; font-size: 13px; font-weight: 500; font-family: var(--ff);
+      cursor: pointer; margin-top: 14px; transition: background .15s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .analyst-btn:hover { background: var(--navy-h); }
+    .analyst-btn:disabled { background: #cbd5e1; color: #94a3b8; cursor: not-allowed; }
+    .spinner-a {
+      width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; display: none;
+    }
+
+    /* Formula bar */
+    .formula {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px; background: var(--navy); border-radius: 10px; margin-bottom: 12px;
+    }
+    .formula-item { text-align: center; }
+    .formula-num { font-family: var(--fm); font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.35); transition: color .3s; }
+    .formula-num.active { color: #fff; }
+    .formula-lbl { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .formula-op { font-size: 18px; color: rgba(255,255,255,0.25); }
+    .formula-result { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 8px 14px; text-align: center; }
+    .formula-result .formula-num { color: #fff; }
+    .formula-result .formula-lbl { color: rgba(255,255,255,0.6); }
+
+    /* Result rows */
+    .result-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+    .result-prime-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .result-prime-val { font-family: var(--fm); font-size: 32px; font-weight: 600; color: var(--navy); line-height: 1; }
+    .result-prime-lbl { font-size: 11px; color: var(--muted); padding-bottom: 3px; }
+    .result-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 12px; border-bottom: 1px solid #f1f5f9; }
+    .result-row:last-child { border-bottom: none; }
+    .result-key { color: var(--muted2); }
+    .result-val { font-family: var(--fm); font-weight: 500; }
+
+    .risk-badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .risk-faible     { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .risk-modere     { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .risk-eleve      { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .risk-tres-eleve { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .risk-bar-wrap { margin: 12px 0 4px; }
+    .risk-bar-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-bottom: 5px; }
+    .risk-bar-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .risk-bar-fill { height: 100%; border-radius: 3px; transition: width .5s ease, background .5s ease; width: 0%; }
+
+    /* SHAP */
+    .factor-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+    .factor-row:last-child { border-bottom: none; }
+    .factor-name { flex: 1; color: var(--text); }
+    .factor-bar-track { width: 70px; height: 4px; background: var(--border); border-radius: 2px; }
+    .factor-bar-fill { height: 100%; border-radius: 2px; }
+    .factor-dir { font-family: var(--fm); font-size: 10px; min-width: 36px; text-align: right; font-weight: 500; }
+
+    .empty-state { text-align: center; padding: 24px 0; color: var(--muted); font-size: 12px; }
+    .empty-state svg { width: 28px; height: 28px; margin-bottom: 8px; opacity: 0.2; }
+
+    .error-analyst { background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #b91c1c; margin-bottom: 12px; display: none; }
+
+    .logout-btn {
+      font-size: 11px; color: rgba(255,255,255,0.55); background: transparent;
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; padding: 4px 10px;
+      cursor: pointer; font-family: var(--ff); transition: all .15s;
+    }
+    .logout-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+    .page-footer { max-width: 1100px; margin: 0 auto; padding: 0 20px 20px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 16px; }
+    .footer-pill { font-family: var(--fm); font-size: 10px; padding: 3px 8px; border-radius: 4px; background: var(--bg2); border: 1px solid var(--border); color: var(--muted2); }
+    .footer-pills { display: flex; gap: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- ─ NAV ─ -->
+<nav class="navbar">
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <span class="nav-logo-name">AutoAssur</span>
+  </a>
+  <div class="nav-sep"></div>
+  <span class="nav-sub">Assurance automobile</span>
+  <div class="nav-spacer"></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('client')">Mon devis</button>
+    <button class="nav-tab" onclick="showPage('analyste')" id="tab-analyste">Espace analyste</button>
+  </div>
+  <div class="nav-badge">
+    <div class="nav-badge-dot"></div>
+    <span id="api-status-label">Vérification...</span>
+  </div>
+  <button class="logout-btn" id="logout-btn" style="display:none" onclick="logout()">Déconnexion</button>
+</nav>
+
+<!-- ════════════════════════════════
+     PAGE CLIENT
+════════════════════════════════ -->
+<div class="page active" id="page-client">
+  <div class="client-hero">
+    <h1>Obtenez votre devis en 2 minutes</h1>
+    <p>Renseignez vos informations et découvrez votre prime d'assurance auto instantanément.</p>
+  </div>
+
+  <div class="client-wrap">
+
+    <!-- Erreur -->
+    <div class="error-client" id="error-client"></div>
+
+    <!-- Résultat -->
+    <div class="result-client" id="result-client">
+      <div class="result-client-top">
+        <div class="result-check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="result-client-msg">Votre prime mensuelle estimée</div>
+        <div class="result-client-prime"><span id="c-prime-mois">—</span> <span class="result-client-unit">€/mois</span></div>
+        <div class="result-client-annual">soit <strong id="c-prime-an">—</strong> € par an · <span id="c-risk-pill"></span></div>
+      </div>
+
+      <div class="result-client-details">
+        <div class="result-detail-box">
+          <div class="result-detail-lbl">Garanties incluses</div>
+          <div class="result-detail-val" id="c-garanties">—</div>
+        </div>
+        <div class="result-detail-box">
+          <div class="result-detail-lbl">Franchise</div>
+          <div class="result-detail-val">300 €</div>
+        </div>
+        <div class="result-detail-box">
+          <div class="result-detail-lbl">Assistance</div>
+          <div class="result-detail-val">24h/24 7j/7</div>
+        </div>
+        <div class="result-detail-box">
+          <div class="result-detail-lbl">Véhicule de remplacement</div>
+          <div class="result-detail-val">Inclus</div>
+        </div>
+      </div>
+
+      <ul class="coverage-list" id="c-coverage">
+        <li class="coverage-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Responsabilité civile obligatoire
+        </li>
+        <li class="coverage-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Protection du conducteur
+        </li>
+        <li class="coverage-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Assistance panne et accident
+        </li>
+      </ul>
+
+      <button class="subscribe-btn">Souscrire ce contrat →</button>
+    </div>
+
+    <!-- Étape 1 : Conducteur -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Votre profil conducteur</div>
+          <div class="step-sub">Informations personnelles</div>
+        </div>
+      </div>
+      <div class="client-grid">
+        <div class="client-group">
+          <label class="client-label">Âge</label>
+          <input class="client-input" type="number" id="c-age" value="35" min="18" max="100">
+        </div>
+        <div class="client-group">
+          <label class="client-label">Sexe</label>
+          <select class="client-select" id="c-sex">
+            <option value="M">Masculin</option>
+            <option value="F">Féminin</option>
+          </select>
+        </div>
+        <div class="client-group">
+          <label class="client-label">Années de permis</label>
+          <input class="client-input" type="number" id="c-permis" value="10" min="0">
+        </div>
+        <div class="client-group">
+          <label class="client-label">Code postal</label>
+          <input class="client-input" type="text" id="c-cp" value="75001">
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 2 : Véhicule -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Votre véhicule</div>
+          <div class="step-sub">Caractéristiques du véhicule à assurer</div>
+        </div>
+      </div>
+      <div class="client-grid">
+        <div class="client-group">
+          <label class="client-label">Marque</label>
+          <select class="client-select" id="c-marque">
+            <option>Peugeot</option><option>Renault</option><option>Citroën</option>
+            <option>BMW</option><option>Mercedes</option><option>Volkswagen</option>
+            <option>Toyota</option><option>Ford</option><option>Audi</option>
+          </select>
+        </div>
+        <div class="client-group">
+          <label class="client-label">Modèle</label>
+          <input class="client-input" type="text" id="c-modele" value="308">
+        </div>
+        <div class="client-group">
+          <label class="client-label">Type de véhicule</label>
+          <select class="client-select" id="c-typev">
+            <option value="berline">Berline</option>
+            <option value="suv">SUV</option>
+            <option value="citadine">Citadine</option>
+            <option value="break">Break</option>
+            <option value="coupe">Coupé</option>
+          </select>
+        </div>
+        <div class="client-group">
+          <label class="client-label">Carburant</label>
+          <select class="client-select" id="c-carb">
+            <option value="essence">Essence</option>
+            <option value="diesel">Diesel</option>
+            <option value="electrique">Électrique</option>
+            <option value="hybride">Hybride</option>
+          </select>
+        </div>
+        <div class="client-group">
+          <label class="client-label">Valeur du véhicule (€)</label>
+          <input class="client-input" type="number" id="c-prix" value="18000" min="0">
+        </div>
+        <div class="client-group">
+          <label class="client-label">Ancienneté (ans)</label>
+          <input class="client-input" type="number" id="c-anc" value="3" min="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Étape 3 : Contrat -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Votre contrat</div>
+          <div class="step-sub">Niveau de couverture souhaité</div>
+        </div>
+      </div>
+      <div class="client-grid">
+        <div class="client-group full">
+          <label class="client-label">Niveau de couverture</label>
+          <select class="client-select" id="c-contrat">
+            <option value="A">Tous risques — couverture maximale</option>
+            <option value="B">Tiers étendu — couverture intermédiaire</option>
+            <option value="C">Tiers simple — couverture essentielle</option>
+          </select>
+        </div>
+        <div class="client-group">
+          <label class="client-label">Utilisation</label>
+          <select class="client-select" id="c-util">
+            <option value="prive">Trajet domicile / travail</option>
+            <option value="pro">Usage professionnel</option>
+            <option value="mixte">Usage mixte</option>
+          </select>
+        </div>
+        <div class="client-group">
+          <label class="client-label">Paiement</label>
+          <select class="client-select" id="c-paie">
+            <option value="mensuel">Mensuel</option>
+            <option value="trimestriel">Trimestriel</option>
+            <option value="annuel">Annuel</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="client-btn" id="c-btn" onclick="calculerClient()">
+        <div class="spinner-c" id="c-spinner"></div>
+        <span id="c-btn-txt">Calculer mon devis gratuit</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="c-btn-icon"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     PAGE LOGIN ANALYSTE
+════════════════════════════════ -->
+<div class="page" id="page-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="login-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="login-title">Espace analyste</div>
+        <div class="login-sub">Accès réservé aux souscripteurs AutoAssur</div>
+      </div>
+      <div class="login-error" id="login-error">Identifiants incorrects.</div>
+      <div class="login-group">
+        <label class="login-label">Identifiant</label>
+        <input class="login-input" type="text" id="login-user" placeholder="admin" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-group">
+        <label class="login-label">Mot de passe</label>
+        <input class="login-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="login-btn" onclick="doLogin()">Se connecter</button>
+      <div class="login-hint">Demo : <code>admin</code> / <code>autoassur2024</code></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     PAGE ANALYSTE
+════════════════════════════════ -->
+<div class="page" id="page-analyste">
+  <div class="analyst-wrap">
+
+    <!-- GAUCHE -->
+    <div>
+      <div class="card">
+        <div class="card-title">Fiche de tarification — Souscripteur</div>
+
+        <div class="section-sep">Conducteur</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Âge</label>
+            <input class="form-input" type="number" id="a-age" value="35" min="18" max="100">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sexe</label>
+            <select class="form-select" id="a-sex"><option value="M">Masculin</option><option value="F">Féminin</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ancienneté permis (ans)</label>
+            <input class="form-input" type="number" id="a-permis" value="12" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Code postal</label>
+            <input class="form-input" type="text" id="a-cp" value="75001">
+          </div>
+        </div>
+
+        <div class="section-sep">Véhicule</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Marque</label>
+            <select class="form-select" id="a-marque"><option>Peugeot</option><option>Renault</option><option>Citroën</option><option>BMW</option><option>Mercedes</option><option>Volkswagen</option><option>Toyota</option><option>Ford</option><option>Audi</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Modèle</label>
+            <input class="form-input" type="text" id="a-modele" value="308">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-select" id="a-typev"><option value="berline">Berline</option><option value="suv">SUV</option><option value="citadine">Citadine</option><option value="break">Break</option><option value="coupe">Coupé</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Carburant</label>
+            <select class="form-select" id="a-carb"><option value="essence">Essence</option><option value="diesel">Diesel</option><option value="electrique">Électrique</option><option value="hybride">Hybride</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Prix (€)</label>
+            <input class="form-input" type="number" id="a-prix" value="18000" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Puissance DIN (ch)</label>
+            <input class="form-input" type="number" id="a-din" value="90" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cylindrée (cc)</label>
+            <input class="form-input" type="number" id="a-cyl" value="1600" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Poids (kg)</label>
+            <input class="form-input" type="number" id="a-poids" value="1200" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Vitesse max (km/h)</label>
+            <input class="form-input" type="number" id="a-vit" value="180" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ancienneté véhicule (ans)</label>
+            <input class="form-input" type="number" id="a-ancv" value="3" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fin de vente (année)</label>
+            <input class="form-input" type="number" id="a-fin" value="2022">
+          </div>
+        </div>
+
+        <div class="section-sep">Contrat</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Type de contrat</label>
+            <select class="form-select" id="a-contrat"><option value="A">A — Tous risques</option><option value="B">B — Tiers étendu</option><option value="C">C — Tiers simple</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Durée (mois)</label>
+            <input class="form-input" type="number" id="a-duree" value="12" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Utilisation</label>
+            <select class="form-select" id="a-util"><option value="prive">Privé</option><option value="pro">Professionnel</option><option value="mixte">Mixte</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fréquence de paiement</label>
+            <select class="form-select" id="a-paie"><option value="mensuel">Mensuel</option><option value="trimestriel">Trimestriel</option><option value="annuel">Annuel</option></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Ancienneté client (ans)</label>
+            <input class="form-input" type="number" id="a-ancc" value="5" min="0">
+          </div>
+        </div>
+
+        <button class="analyst-btn" id="a-btn" onclick="calculerAnalyste()">
+          <div class="spinner-a" id="a-spinner"></div>
+          <span id="a-btn-txt">Lancer la tarification</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- DROITE -->
+    <div>
+      <div class="formula">
+        <div class="formula-item">
+          <div class="formula-num" id="a-f-freq">—</div>
+          <div class="formula-lbl">Fréquence</div>
+        </div>
+        <div class="formula-op">×</div>
+        <div class="formula-item">
+          <div class="formula-num" id="a-f-grav">—</div>
+          <div class="formula-lbl">Gravité</div>
+        </div>
+        <div class="formula-op">=</div>
+        <div class="formula-result">
+          <div class="formula-num" id="a-f-prime">—</div>
+          <div class="formula-lbl">Prime pure</div>
+        </div>
+      </div>
+
+      <div class="error-analyst" id="error-analyst"></div>
+
+      <div class="card">
+        <div class="card-title">Détail actuariel</div>
+        <div class="result-box">
+          <div class="result-prime-row">
+            <div class="result-prime-val" id="a-res-prime">—</div>
+            <div class="result-prime-lbl">prime pure / an</div>
+          </div>
+          <div class="result-row"><span class="result-key">Fréquence prédite</span><span class="result-val" id="a-res-freq">—</span></div>
+          <div class="result-row"><span class="result-key">Coût moyen prédit</span><span class="result-val" id="a-res-grav">—</span></div>
+          <div class="result-row"><span class="result-key">Prime mensuelle</span><span class="result-val" id="a-res-mois">—</span></div>
+          <div class="result-row"><span class="result-key">Niveau de risque</span><span id="a-res-risk">—</span></div>
+          <div class="result-row"><span class="result-key">Modèle version</span><span class="result-val" style="font-size:11px;color:var(--muted)">XGBoost v1.0</span></div>
+          <div class="risk-bar-wrap">
+            <div class="risk-bar-labels"><span>Faible</span><span>Très élevé</span></div>
+            <div class="risk-bar-track"><div class="risk-bar-fill" id="a-risk-bar"></div></div>
+          </div>
+        </div>
+        <div class="empty-state" id="a-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          <div>Lancez la tarification<br>pour voir les résultats</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Facteurs de risque — SHAP</div>
+        <div id="a-shap">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <div>Les facteurs explicatifs<br>s'afficheront ici</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;font-size:10px;color:var(--muted)">
+          Via <code style="font-family:var(--fm);color:var(--navy)">POST /predict/explain</code> · SHAP TreeExplainer
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="page-footer">
+    <span>AutoAssur · Back-office souscription</span>
+    <div class="footer-pills">
+      <span class="footer-pill">FastAPI</span>
+      <span class="footer-pill">XGBoost</span>
+      <span class="footer-pill">SHAP</span>
+      <span class="footer-pill">45 tests ✓</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Auth ──
+  const CREDS = { admin: 'autoassur2024' };
+  let loggedIn = false;
+
+  function showPage(name) {
+    if (name === 'analyste') {
+      if (!loggedIn) { activatePage('login'); return; }
+      activatePage('analyste');
+    } else {
+      activatePage('client');
+    }
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    if (name === 'client') document.querySelectorAll('.nav-tab')[0].classList.add('active');
+    else document.querySelectorAll('.nav-tab')[1].classList.add('active');
+  }
+
+  function activatePage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+  }
+
+  function doLogin() {
+    const u = document.getElementById('login-user').value.trim();
+    const p = document.getElementById('login-pass').value;
+    if (CREDS[u] && CREDS[u] === p) {
+      loggedIn = true;
+      document.getElementById('login-error').style.display = 'none';
+      document.getElementById('logout-btn').style.display = 'block';
+      activatePage('analyste');
+      document.querySelectorAll('.nav-tab')[1].classList.add('active');
+      document.querySelectorAll('.nav-tab')[0].classList.remove('active');
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  }
+
+  function logout() {
+    loggedIn = false;
+    document.getElementById('logout-btn').style.display = 'none';
+    showPage('client');
+  }
+
+  // ── Health ──
+  async function checkHealth() {
+    try {
+      const r = await fetch('/health');
+      const d = await r.json();
+      document.getElementById('api-status-label').textContent = d.status === 'ok' ? 'API en ligne' : 'API dégradée';
+    } catch { document.getElementById('api-status-label').textContent = 'API hors ligne'; }
+  }
+  checkHealth();
+
+  // ── Helpers ──
+  function fmt(n, d=0) { return n.toLocaleString('fr-FR', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+  function gv(id) { const e=document.getElementById(id); return e.type==='number'?parseFloat(e.value):e.value; }
+
+  function riskClass(n) { return {'faible':'risk-faible','modéré':'risk-modere','élevé':'risk-eleve','très élevé':'risk-tres-eleve'}[n]||'risk-faible'; }
+  function riskPct(n)   { return {'faible':12,'modéré':38,'élevé':65,'très élevé':90}[n]||0; }
+  function riskColor(n) { return {'faible':'#15803d','modéré':'#b45309','élevé':'#c2410c','très élevé':'#b91c1c'}[n]||'#15803d'; }
+  function riskPillClass(n) { return {'faible':'rp-faible','modéré':'rp-modere','élevé':'rp-eleve','très élevé':'rp-tres-eleve'}[n]||'rp-faible'; }
+
+  function garanties(type) {
+    return {'A':'Tous risques','B':'Tiers étendu','C':'Tiers simple'}[type]||'Tous risques';
+  }
+  function coverageItems(type) {
+    const base = ['Responsabilité civile obligatoire','Protection du conducteur','Assistance 0km'];
+    const ext  = [...base,'Dommages tous accidents','Vol et incendie'];
+    const full = [...ext,'Bris de glace','Catastrophes naturelles'];
+    return {'A':full,'B':ext,'C':base}[type]||full;
+  }
+
+  function buildPayload(prefix) {
+    const din   = prefix==='c' ? 90  : gv('a-din');
+    const cyl   = prefix==='c' ? 1600: gv('a-cyl');
+    const poids = prefix==='c' ? 1200: gv('a-poids');
+    const vit   = prefix==='c' ? 180 : gv('a-vit');
+    const duree = prefix==='c' ? 12  : gv('a-duree');
+    const ancc  = prefix==='c' ? 5   : gv('a-ancc');
+    const fin   = prefix==='c' ? 2022: gv('a-fin');
+    const ancv  = prefix==='c' ? gv('c-anc') : gv('a-ancv');
+
+    const age    = gv(prefix==='c'?'c-age':'a-age');
+    const sex    = gv(prefix==='c'?'c-sex':'a-sex');
+    const permis = gv(prefix==='c'?'c-permis':'a-permis');
+    const cp     = document.getElementById(prefix==='c'?'c-cp':'a-cp').value;
+    const marque = document.getElementById(prefix==='c'?'c-marque':'a-marque').value;
+    const modele = document.getElementById(prefix==='c'?'c-modele':'a-modele').value;
+    const typev  = gv(prefix==='c'?'c-typev':'a-typev');
+    const carb   = gv(prefix==='c'?'c-carb':'a-carb');
+    const prix   = gv(prefix==='c'?'c-prix':'a-prix');
+    const contrat= gv(prefix==='c'?'c-contrat':'a-contrat').split(' ')[0];
+    const util   = gv(prefix==='c'?'c-util':'a-util');
+    const paie   = gv(prefix==='c'?'c-paie':'a-paie');
+
+    return {
+      type_contrat: contrat, duree_contrat: duree, anciennete_info: ancc,
+      freq_paiement: paie, utilisation: util, code_postal: cp,
+      age_conducteur1: age, sex_conducteur1: sex, anciennete_permis1: permis,
+      anciennete_vehicule: ancv, cylindre_vehicule: cyl, din_vehicule: din,
+      essence_vehicule: carb, marque_vehicule: marque, modele_vehicule: modele,
+      fin_vente_vehicule: fin, vitesse_vehicule: vit, type_vehicule: typev,
+      prix_vehicule: prix, poids_vehicule: poids,
+    };
+  }
+
+  function renderShap(facteurs, panelId) {
+    if (!facteurs || !facteurs.length) return;
+    const rows = facteurs.map(f => ({
+      name: f.split(' augmente')[0].split(' diminue')[0],
+      aug: f.includes('augmente')
+    }));
+    document.getElementById(panelId).innerHTML = rows.map((r,i) => {
+      const pct = Math.round(100 - i*18);
+      const col = r.aug ? '#b91c1c' : '#15803d';
+      return `<div class="factor-row">
+        <div class="factor-name">${r.name}</div>
+        <div class="factor-bar-track"><div class="factor-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="factor-dir" style="color:${col}">${r.aug?'▲ risque':'▼ risque'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── CLIENT ──
+  async function calculerClient() {
+    document.getElementById('error-client').style.display = 'none';
+    const btn = document.getElementById('c-btn');
+    btn.disabled = true;
+    document.getElementById('c-spinner').style.display = 'block';
+    document.getElementById('c-btn-icon').style.display = 'none';
+    document.getElementById('c-btn-txt').textContent = 'Calcul en cours...';
+
+    try {
+      const r = await fetch('/predict/explain', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(buildPayload('c'))
+      });
+      if (!r.ok) {
+        const err = await r.json();
+        const detail = err.detail;
+        const msg = typeof detail==='string' ? detail : Array.isArray(detail) ? detail.map(d=>d.msg).join(' · ') : 'Erreur inattendue';
+        document.getElementById('error-client').textContent = msg;
+        document.getElementById('error-client').style.display = 'block';
+        return;
+      }
+      const data = await r.json();
+      const prime = data.prime_pure;
+      const mois  = prime / 12;
+      const niveau = data.niveau_risque;
+      const contrat = gv('c-contrat').split(' ')[0];
+
+      document.getElementById('c-prime-mois').textContent = fmt(mois, 2);
+      document.getElementById('c-prime-an').textContent   = fmt(prime, 0);
+
+      const pc = riskPillClass(niveau);
+      document.getElementById('c-risk-pill').innerHTML = `<span class="risk-pill ${pc}">${niveau}</span>`;
+      document.getElementById('c-garanties').textContent = garanties(contrat);
+
+      const items = coverageItems(contrat);
+      document.getElementById('c-coverage').innerHTML = items.map(i =>
+        `<li class="coverage-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>${i}</li>`
+      ).join('');
+
+      document.getElementById('result-client').classList.add('show');
+      document.getElementById('result-client').scrollIntoView({behavior:'smooth', block:'start'});
+
+    } catch {
+      document.getElementById('error-client').textContent = "Impossible de joindre l'API. Vérifiez que le serveur est démarré.";
+      document.getElementById('error-client').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      document.getElementById('c-spinner').style.display = 'none';
+      document.getElementById('c-btn-icon').style.display = 'block';
+      document.getElementById('c-btn-txt').textContent = 'Recalculer mon devis';
+    }
+  }
+
+  // ── ANALYSTE ──
+  async function calculerAnalyste() {
+    document.getElementById('error-analyst').style.display = 'none';
+    const btn = document.getElementById('a-btn');
+    btn.disabled = true;
+    document.getElementById('a-spinner').style.display = 'block';
+    document.getElementById('a-btn-txt').textContent = 'Calcul en cours...';
+
+    try {
+      const r = await fetch('/predict/explain', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(buildPayload('a'))
+      });
+      if (!r.ok) {
+        const err = await r.json();
+        const detail = err.detail;
+        const msg = typeof detail==='string' ? detail : Array.isArray(detail) ? detail.map(d=>d.msg).join(' · ') : 'Erreur inattendue';
+        document.getElementById('error-analyst').textContent = msg;
+        document.getElementById('error-analyst').style.display = 'block';
+        return;
+      }
+      const data = await r.json();
+      const {frequence_predite:freq, cout_moyen_predit:grav, prime_pure:prime, niveau_risque:niveau} = data;
+
+      document.getElementById('a-empty').style.display = 'none';
+      document.getElementById('a-f-freq').textContent = freq.toFixed(4); document.getElementById('a-f-freq').classList.add('active');
+      document.getElementById('a-f-grav').textContent = fmt(grav,0)+' €'; document.getElementById('a-f-grav').classList.add('active');
+      document.getElementById('a-f-prime').textContent = fmt(prime,0)+' €';
+      document.getElementById('a-res-prime').textContent = fmt(prime,0)+' €';
+      document.getElementById('a-res-freq').textContent  = (freq*100).toFixed(2)+'%';
+      document.getElementById('a-res-grav').textContent  = fmt(grav,0)+' €';
+      document.getElementById('a-res-mois').textContent  = fmt(prime/12,2)+' €';
+      document.getElementById('a-res-risk').innerHTML = `<span class="risk-badge ${riskClass(niveau)}">${niveau}</span>`;
+      const bar = document.getElementById('a-risk-bar');
+      bar.style.width = riskPct(niveau)+'%'; bar.style.background = riskColor(niveau);
+      renderShap(data.facteurs_de_risque||[], 'a-shap');
+
+    } catch {
+      document.getElementById('error-analyst').textContent = "Impossible de joindre l'API.";
+      document.getElementById('error-analyst').style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      document.getElementById('a-spinner').style.display = 'none';
+      document.getElementById('a-btn-txt').textContent = 'Lancer la tarification';
+    }
+  }
+</script>
+</body>
+</html>

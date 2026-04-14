@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run:*)",
+      "Bash(where uv:*)",
+      "Bash(where uvicorn:*)",
+      "Bash(where python:*)",
+      "Read(//c/Users/CYTech Student/.local/**)",
+      "Read(//c/Users/CYTech Student/**)"
+    ]
+  }
+}
